@@ -2,7 +2,10 @@
 
 export function otsuThreshold(src: Uint8Array): number {
   const hist = new Int32Array(256);
-  for (let i = 0; i < src.length; i++) hist[src[i] ?? 0]++;
+  for (let i = 0; i < src.length; i++) {
+    const v = src[i]!;
+    hist[v] = (hist[v] ?? 0) + 1;
+  }
 
   const total = src.length;
   let sum = 0;
