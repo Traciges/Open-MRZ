@@ -1,0 +1,43 @@
+{
+  "name": "open-mrz",
+  "version": "0.1.0",
+  "description": "MRZ detection, OCR and parsing from a live MediaStream. Browser-first, no server required.",
+  "type": "module",
+  "main": "./dist/open-mrz.cjs",
+  "module": "./dist/open-mrz.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/open-mrz.js",
+      "require": "./dist/open-mrz.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./worker": {
+      "import": "./dist/mrz.worker.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "model/"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "sideEffects": false,
+  "keywords": ["mrz", "passport", "ocr", "mediastream", "camera", "icao"],
+  "license": "MIT",
+  "dependencies": {
+    "comlink": "^4.4.2",
+    "mrz": "^5.0.2",
+    "onnxruntime-web": "^1.24.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.0",
+    "vite": "^8.0.0",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.1.5"
+  }
+}
