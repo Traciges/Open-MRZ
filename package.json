@@ -23,7 +23,8 @@
   "scripts": {
     "build": "vite build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "demo": "node demo/serve.js"
   },
   "sideEffects": false,
   "keywords": ["mrz", "passport", "ocr", "mediastream", "camera", "icao"],

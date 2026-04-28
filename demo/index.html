@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Open-MRZ Demo</title>
+
+    <!-- Resolve peer dependencies from CDN so dist/ can be loaded unbundled -->
+    <script type="importmap">
+      {
+        "imports": {
+          "comlink": "https://cdn.jsdelivr.net/npm/comlink@4.4.2/dist/esm/comlink.min.mjs",
+          "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/+esm",
+          "mrz": "https://cdn.jsdelivr.net/npm/mrz@5.0.2/+esm"
+        }
+      }
+    </script>
+
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #0a0a0a;
+        color: #e2e2e2;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── Header ──────────────────────────────────────────── */
+      header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.85rem 1.5rem;
+        border-bottom: 1px solid #1e1e1e;
+      }
+      header h1 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      header h1 span {
+        color: #3b82f6;
+      }
+
+      #status-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: #1e1e1e;
+        color: #666;
+        transition:
+          background 0.2s,
+          color 0.2s;
+      }
+      #status-badge.init {
+        background: #1e2a3a;
+        color: #60a5fa;
+      }
+      #status-badge.scanning {
+        background: #0d2b1d;
+        color: #34d399;
+      }
+      #status-badge.found {
+        background: #132a06;
+        color: #86efac;
+      }
+      #status-badge.error {
+        background: #2a0d0d;
+        color: #f87171;
+      }
+
+      /* ── Main layout ─────────────────────────────────────── */
+      main {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 1.25rem;
+        padding: 1.25rem 1.5rem;
+        max-width: 1100px;
+        width: 100%;
+        margin: 0 auto;
+      }
+
+      @media (max-width: 720px) {
+        main {
+          grid-template-columns: 1fr;
+          padding: 0.75rem;
+        }
+      }
+
+      /* ── Video / Camera ──────────────────────────────────── */
+      .camera-col {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .video-wrap {
+        position: relative;
+        background: #111;
+        border-radius: 14px;
+        overflow: hidden;
+        aspect-ratio: 4 / 3;
+        border: 1px solid #1e1e1e;
+      }
+
+      #video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      #overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      #toggle-btn {
+        padding: 0.5rem 1.2rem;
+        border-radius: 8px;
+        border: none;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: #2563eb;
+        color: #fff;
+        transition:
+          background 0.15s,
+          opacity 0.15s;
+        white-space: nowrap;
+      }
+      #toggle-btn:hover:not(:disabled) {
+        background: #1d4ed8;
+      }
+      #toggle-btn.stop {
+        background: #dc2626;
+      }
+      #toggle-btn.stop:hover:not(:disabled) {
+        background: #b91c1c;
+      }
+      #toggle-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      #status-text {
+        font-size: 0.82rem;
+        color: #666;
+      }
+
+      /* ── Results panel ───────────────────────────────────── */
+      .results-col {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .results-col h2 {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .result-card {
+        background: #111;
+        border: 1px solid #1e1e1e;
+        border-radius: 14px;
+        padding: 1rem;
+        flex: 1;
+      }
+      .result-card.valid {
+        border-color: #14532d;
+      }
+      .result-card.invalid {
+        border-color: #7f1d1d;
+      }
+
+      .validity-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.22rem 0.55rem;
+        border-radius: 5px;
+        margin-bottom: 0.85rem;
+        letter-spacing: 0.03em;
+      }
+      .validity-pill.valid {
+        background: #14532d;
+        color: #4ade80;
+      }
+      .validity-pill.invalid {
+        background: #450a0a;
+        color: #f87171;
+      }
+
+      .field-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+      }
+      .field-table td {
+        padding: 0.28rem 0;
+        vertical-align: top;
+      }
+      .field-table td:first-child {
+        color: #555;
+        width: 44%;
+        padding-right: 0.5rem;
+      }
+      .field-table td:last-child {
+        color: #ddd;
+        font-family: ui-monospace, "Cascadia Code", monospace;
+        font-size: 0.8rem;
+        word-break: break-all;
+      }
+
+      .fmt-badge {
+        background: #1e293b;
+        color: #94a3b8;
+        font-size: 0.68rem;
+        font-family: ui-monospace, monospace;
+        padding: 0.1rem 0.35rem;
+        border-radius: 3px;
+      }
+
+      .placeholder {
+        color: #444;
+        font-size: 0.82rem;
+        line-height: 1.6;
+        text-align: center;
+        padding: 2.5rem 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Open<span>-MRZ</span></h1>
+      <span id="status-badge">Ready</span>
+    </header>
+
+    <main>
+      <!-- Camera column -->
+      <section class="camera-col">
+        <div class="video-wrap">
+          <video id="video" playsinline muted autoplay></video>
+          <canvas id="overlay"></canvas>
+        </div>
+        <div class="controls">
+          <button id="toggle-btn">Start</button>
+          <span id="status-text">Press Start to open the camera.</span>
+        </div>
+      </section>
+
+      <!-- Results column -->
+      <section class="results-col">
+        <h2>Scan result</h2>
+        <div id="result-wrap">
+          <div class="result-card">
+            <p class="placeholder">
+              No document scanned yet.<br />Point the camera at an MRZ.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { MRZScanner } from "../dist/open-mrz.js";
+
+      // ── DOM refs ─────────────────────────────────────────────
+      const video = document.getElementById("video");
+      const overlay = document.getElementById("overlay");
+      const ctx = overlay.getContext("2d");
+      const toggleBtn = document.getElementById("toggle-btn");
+      const statusText = document.getElementById("status-text");
+      const badge = document.getElementById("status-badge");
+      const resultWrap = document.getElementById("result-wrap");
+
+      let scanner = null;
+      let mediaStream = null;
+      let running = false;
+      let fadeTimer = null;
+
+      // ── Status helpers ────────────────────────────────────────
+      function setStatus(text, state = "") {
+        statusText.textContent = text;
+        const labels = {
+          init: "Initializing…",
+          scanning: "Scanning…",
+          found: "Found!",
+          error: "Error",
+        };
+        badge.textContent = labels[state] ?? "Ready";
+        badge.className = state ? `status-badge ${state}` : "status-badge";
+      }
+
+      // ── Canvas overlay ────────────────────────────────────────
+      function syncCanvasSize() {
+        overlay.width = video.offsetWidth;
+        overlay.height = video.offsetHeight;
+      }
+
+      function drawMrzRegion(region) {
+        syncCanvasSize();
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+        if (!video.videoWidth || !video.videoHeight) return;
+
+        const sx = overlay.width / video.videoWidth;
+        const sy = overlay.height / video.videoHeight;
+
+        ctx.save();
+        ctx.strokeStyle = "#4ade80";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "#4ade80";
+        ctx.shadowBlur = 10;
+
+        ctx.beginPath();
+        region.corners.forEach(({ x, y }, i) => {
+          const px = x * sx;
+          const py = y * sy;
+          i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        });
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(74,222,128,0.07)";
+        ctx.fill();
+        ctx.restore();
+
+        // Auto-clear after 600 ms if no new detections arrive
+        clearTimeout(fadeTimer);
+        fadeTimer = setTimeout(
+          () => ctx.clearRect(0, 0, overlay.width, overlay.height),
+          600,
+        );
+      }
+
+      // ── Result rendering ──────────────────────────────────────
+      function renderResult(result) {
+        const f = result.fields;
+        const name =
+          [f.surname, f.givenNames].filter(Boolean).join(", ") || "—";
+
+        const rows = [
+          ["Name", name],
+          ["Document No.", f.documentNumber ?? "—"],
+          ["Date of birth", f.dateOfBirth ?? "—"],
+          ["Expiry date", f.expiryDate ?? "—"],
+          ["Nationality", f.nationality ?? "—"],
+          ["Issuing state", f.issuingState ?? "—"],
+          ["Format", `<span class="fmt-badge">${result.format}</span>`],
+          ["Confidence", (result.confidence * 100).toFixed(1) + "%"],
+        ];
+
+        resultWrap.innerHTML = `
+        <div class="result-card ${result.valid ? "valid" : "invalid"}">
+          <div class="validity-pill ${result.valid ? "valid" : "invalid"}">
+            ${result.valid ? "✓ Valid" : "✗ Invalid"}
+          </div>
+          <table class="field-table">
+            ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}
+          </table>
+        </div>
+      `;
+      }
+
+      // ── Start ─────────────────────────────────────────────────
+      async function startScanner() {
+        toggleBtn.disabled = true;
+        setStatus("Requesting camera access…", "init");
+
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "environment",
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+        } catch (err) {
+          setStatus("Camera access denied: " + err.message, "error");
+          toggleBtn.disabled = false;
+          return;
+        }
+
+        video.srcObject = mediaStream;
+        try {
+          await video.play();
+        } catch {
+          /* autoplay already started */
+        }
+        syncCanvasSize();
+
+        setStatus("Loading model…", "init");
+
+        scanner = new MRZScanner({
+          workerUrl: new URL("../dist/mrz.worker.js", import.meta.url).href,
+          modelUrl: "../model/mrz-cnn.onnx",
+          ortWasmPath:
+            "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/",
+          ortUrl:
+            "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/+esm",
+
+          onDetected(region) {
+            drawMrzRegion(region);
+            if (!badge.classList.contains("found"))
+              setStatus("MRZ region detected — reading…", "scanning");
+          },
+
+          onResult(result) {
+            renderResult(result);
+            setStatus("Document scanned successfully.", "found");
+          },
+
+          onError(err) {
+            setStatus("Error: " + err.message, "error");
+            console.error("[open-mrz]", err);
+          },
+
+          onProcessing(active) {
+            if (
+              !badge.classList.contains("found") &&
+              !badge.classList.contains("error")
+            ) {
+              if (active) setStatus("Processing frame…", "scanning");
+            }
+          },
+        });
+
+        try {
+          await scanner.init();
+        } catch (err) {
+          setStatus("Failed to load model: " + err.message, "error");
+          toggleBtn.disabled = false;
+          return;
+        }
+
+        scanner.attach(video);
+        scanner.start();
+        running = true;
+
+        setStatus("Scanning — hold document steady.", "scanning");
+        toggleBtn.textContent = "Stop";
+        toggleBtn.classList.add("stop");
+        toggleBtn.disabled = false;
+      }
+
+      // ── Stop ──────────────────────────────────────────────────
+      async function stopScanner() {
+        toggleBtn.disabled = true;
+
+        scanner?.stop();
+        await scanner?.destroy();
+        scanner = null;
+
+        mediaStream?.getTracks().forEach((t) => t.stop());
+        mediaStream = null;
+        video.srcObject = null;
+
+        clearTimeout(fadeTimer);
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+        running = false;
+        setStatus("Press Start to open the camera.", "");
+        toggleBtn.textContent = "Start";
+        toggleBtn.classList.remove("stop");
+        toggleBtn.disabled = false;
+      }
+
+      // ── Wire up ───────────────────────────────────────────────
+      toggleBtn.addEventListener("click", () =>
+        running ? stopScanner() : startScanner(),
+      );
+      window.addEventListener("resize", syncCanvasSize);
+    </script>
+  </body>
+</html>

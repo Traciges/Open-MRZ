@@ -208,7 +208,7 @@ The `<video>` element must have `playsinline` on iOS, otherwise Safari plays the
 | `frameRate` | `number` | `8` | Maximum frames per second to process. Frames arriving while the Worker is busy are dropped. |
 | `confidenceThreshold` | `number` | `0.85` | Minimum mean character confidence (0–1) required to enter the voting buffer. |
 | `votingFrames` | `number` | `3` | Number of consecutive frames that must agree on the document number before a result is emitted. |
-| `modelUrl` | `string` | bundled | Override the URL to the `mrz-ocr.onnx` model file. |
+| `modelUrl` | `string` | bundled | Override the URL to the `mrz-cnn.onnx` model file. |
 | `workerUrl` | `string` | bundled | Override the URL to the compiled Worker script. Required with some bundler setups. |
 | `ortWasmPath` | `string` | `undefined` | Base URL for `onnxruntime-web` WASM files. **Must be set in production.** |
 | `formats` | `MRZFormat[]` | all formats | Restrict which ICAO formats are accepted. Results in other formats are discarded. |
