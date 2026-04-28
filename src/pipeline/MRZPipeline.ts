@@ -48,9 +48,9 @@ export class MRZPipeline {
     this.injectedRecognizer = opts?.recognizer ?? null;
   }
 
-  async init(modelUrl: string, formats: MRZFormat[], wasmPath?: string): Promise<void> {
+  async init(modelUrl: string, formats: MRZFormat[], wasmPath?: string, ortUrl?: string): Promise<void> {
     this.formats = formats;
-    this.recognizer = this.injectedRecognizer ?? new MRZRecognizer(modelUrl, wasmPath);
+    this.recognizer = this.injectedRecognizer ?? new MRZRecognizer(modelUrl, wasmPath, ortUrl);
     await this.recognizer.init();
   }
 

@@ -240,7 +240,7 @@ describe('MRZScanner — init()', () => {
     });
     await scanner.init();
 
-    expect(mocks.workerInit).toHaveBeenCalledWith('fake://model.onnx', ['TD3'], undefined);
+    expect(mocks.workerInit).toHaveBeenCalledWith('fake://model.onnx', ['TD3'], undefined, undefined);
   });
 
   it('is idempotent — second init() call is a no-op', async () => {
@@ -598,6 +598,6 @@ describe('MRZScanner.scanImage()', () => {
       formats: ['TD3'],
     });
 
-    expect(mocks.pipelineInit).toHaveBeenCalledWith('fake://model.onnx', ['TD3'], undefined);
+    expect(mocks.pipelineInit).toHaveBeenCalledWith('fake://model.onnx', ['TD3'], undefined, undefined);
   });
 });

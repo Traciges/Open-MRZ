@@ -56,6 +56,7 @@ export class MRZScanner {
   private readonly modelUrl: string | undefined;
   private readonly workerUrl: string | undefined;
   private readonly ortWasmPath: string | undefined;
+  private readonly ortUrl: string | undefined;
 
   private worker: WorkerProxy | null = null;
   private extractor: FrameExtractor | null = null;
@@ -74,6 +75,7 @@ export class MRZScanner {
     this.modelUrl = options.modelUrl;
     this.workerUrl = options.workerUrl;
     this.ortWasmPath = options.ortWasmPath;
+    this.ortUrl = options.ortUrl;
 
     this.confidenceBuffer = new ConfidenceBuffer({
       votingFrames: this.votingFrames,
@@ -104,7 +106,7 @@ export class MRZScanner {
     const modelUrl = this.modelUrl ?? new URL('../model/mrz-ocr.onnx', import.meta.url).href;
 
     try {
-      await this.worker.init(modelUrl, this.formats, this.ortWasmPath);
+      await this.worker.init(modelUrl, this.formats, this.ortWasmPath, this.ortUrl);
     } catch (err) {
       throw new MRZError('Failed to load ONNX model in Worker', 'MODEL_LOAD_FAILED', err);
     }
@@ -224,7 +226,7 @@ export class MRZScanner {
       throw new MRZError('modelUrl is required for MRZScanner.scanImage()', 'MODEL_LOAD_FAILED');
     }
 
-    await pipeline.init(modelUrl, options?.formats ?? DEFAULT_FORMATS, options?.ortWasmPath);
+    await pipeline.init(modelUrl, options?.formats ?? DEFAULT_FORMATS, options?.ortWasmPath, options?.ortUrl);
 
     try {
       const imageData = await sourceToImageData(source);

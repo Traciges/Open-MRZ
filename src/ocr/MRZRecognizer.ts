@@ -11,10 +11,18 @@ export class MRZRecognizer {
   constructor(
     private readonly modelUrl: string,
     private readonly wasmPath?: string,
+    private readonly ortUrl?: string,
   ) {}
 
+  private async loadOrt(): Promise<typeof import('onnxruntime-web')> {
+    if (this.ortUrl !== undefined) {
+      return await import(/* @vite-ignore */ this.ortUrl) as typeof import('onnxruntime-web');
+    }
+    return await import('onnxruntime-web');
+  }
+
   async init(): Promise<void> {
-    const ort = await import('onnxruntime-web');
+    const ort = await this.loadOrt();
 
     // Set WASM file location so bundlers can serve them correctly
     if (this.wasmPath !== undefined) {
@@ -41,7 +49,7 @@ export class MRZRecognizer {
       throw new Error('MRZRecognizer not initialized — call init() first');
     }
 
-    const ort = await import('onnxruntime-web');
+    const ort = await this.loadOrt();
     const spec = FORMAT_SPECS[format];
     const { lines, charsPerLine } = spec;
     const totalChars = lines * charsPerLine;

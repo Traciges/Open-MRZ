@@ -5,8 +5,8 @@ import type { MRZFormat, WorkerFrameResult } from '../types.js';
 const pipeline = new MRZPipeline();
 
 const api = {
-  async init(modelUrl: string, formats: MRZFormat[], wasmPath?: string): Promise<void> {
-    await pipeline.init(modelUrl, formats, wasmPath);
+  async init(modelUrl: string, formats: MRZFormat[], wasmPath?: string, ortUrl?: string): Promise<void> {
+    await pipeline.init(modelUrl, formats, wasmPath, ortUrl);
   },
 
   async processFrame(bitmap: ImageBitmap): Promise<WorkerFrameResult> {

@@ -254,6 +254,16 @@ export interface MRZScannerOptions {
    */
   ortWasmPath?: string;
   /**
+   * Full URL to a browser-loadable ESM build of `onnxruntime-web`.
+   * Required when running the bundled Worker without a bundler (e.g. demo /
+   * CDN usage), because Web Workers do not inherit the host document's
+   * importmap and the bare `'onnxruntime-web'` specifier in the Worker bundle
+   * cannot be resolved otherwise.
+   *
+   * Example: `"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/+esm"`
+   */
+  ortUrl?: string;
+  /**
    * Restrict which MRZ document formats are accepted.
    * Results whose format is not in this list are silently discarded.
    * @default ['TD1', 'TD2', 'TD3', 'MRV-A', 'MRV-B']
